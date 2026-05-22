@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جاکە | گەشەپێدەری بەرنامە</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #0ea5e9;
+            --accent: #22d3ee;
+            --bg-dark: #050a18;
+            --bg-card: #0d1b2e;
+            --bg-card-hover: #162035;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: rgba(99,102,241,0.2);
+            --shadow-color: rgba(99,102,241,0.2);
+            --gradient-primary: linear-gradient(135deg, var(--primary), var(--secondary));
+            --gradient-accent: linear-gradient(135deg, var(--primary-light), var(--accent));
+            --gradient-glow: linear-gradient(135deg, #6366f1aa, #0ea5e9aa);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'IBM Plex Sans Arabic', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* ══ CUSTOM CURSOR ══ */
+        .cursor {
+            position: fixed; width: 12px; height: 12px;
+            background: var(--primary); border-radius: 50%;
+            pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s, width 0.3s, height 0.3s, opacity 0.3s;
+            mix-blend-mode: screen;
+        }
+        .cursor-trail {
+            position: fixed; width: 36px; height: 36px;
+            border: 1px solid rgba(99,102,241,0.5); border-radius: 50%;
+            pointer-events: none; z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: all 0.15s ease;
+        }
+        a:hover ~ .cursor, button:hover ~ .cursor { width: 20px; height: 20px; }
+
+        /* ══ THREE.JS BACKGROUND CANVAS ══ */
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ══ NOISE OVERLAY ══ */
+        body::before {
+            content: ''; position: fixed; inset: 0; z-index: 1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none; opacity: 0.4;
+        }
+
+        /* ══ NAVIGATION ══ */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            padding: 1rem 2rem;
+            background: rgba(5, 10, 24, 0.7);
+            backdrop-filter: blur(24px) saturate(180%);
+            border-bottom: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+        .navbar.scrolled { background: rgba(5, 10, 24, 0.95); }
+        .navbar-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo {
+            font-size: 1.6rem; font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            text-decoration: none; letter-spacing: -0.02em;
+            filter: drop-shadow(0 0 12px rgba(99,102,241,0.5));
+        }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a {
+            color: var(--text-secondary); text-decoration: none;
+            font-weight: 500; font-size: 0.95rem;
+            transition: var(--transition); position: relative; cursor: none;
+        }
+        .nav-links a::after {
+            content: ''; position: absolute; bottom: -4px; right: 0;
+            width: 0; height: 2px; background: var(--gradient-primary); transition: var(--transition);
+        }
+        .nav-links a:hover { color: var(--text-primary); }
+        .nav-links a:hover::after { width: 100%; }
+        .mobile-toggle { display: none; flex-direction: column; gap: 5px; cursor: none; padding: 5px; }
+        .mobile-toggle span { width: 25px; height: 2px; background: var(--text-primary); transition: var(--transition); display: block; }
+
+        /* ══ HERO ══ */
+        .hero {
+            min-height: 100vh; display: flex; align-items: center;
+            justify-content: center; padding: 8rem 2rem 4rem;
+            position: relative; z-index: 2;
+        }
+        .hero-content { max-width: 900px; text-align: center; }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.3);
+            border-radius: 50px; font-size: 0.9rem; color: var(--primary-light);
+            margin-bottom: 2rem; opacity: 0;
+        }
+        .badge-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 8px #22c55e;
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%,100% { opacity: 1; box-shadow: 0 0 8px #22c55e; }
+            50% { opacity: 0.5; box-shadow: 0 0 16px #22c55e, 0 0 32px #22c55e; }
+        }
+        .hero-title {
+            font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight: 700;
+            margin-bottom: 1.5rem; line-height: 1.1; opacity: 0;
+        }
+        .hero-title .gradient-text {
+            background: var(--gradient-accent);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(34,211,238,0.4));
+        }
+        .hero-subtitle {
+            font-size: 1.25rem; color: var(--text-secondary);
+            margin-bottom: 2.5rem; max-width: 600px;
+            margin-left: auto; margin-right: auto; opacity: 0;
+        }
+        .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; opacity: 0; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            padding: 0.9rem 2rem; border-radius: var(--radius-md);
+            font-weight: 600; font-size: 1rem; text-decoration: none;
+            transition: var(--transition); cursor: none; border: none;
+            font-family: inherit; position: relative; overflow: hidden;
+        }
+        .btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(rgba(255,255,255,0.1), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .btn:hover::before { opacity: 1; }
+        .btn-primary {
+            background: var(--gradient-primary); color: white;
+            box-shadow: 0 4px 24px var(--shadow-color), 0 0 0 1px rgba(99,102,241,0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 40px var(--shadow-color), 0 0 0 1px rgba(99,102,241,0.5), 0 0 40px rgba(99,102,241,0.2);
+        }
+        .btn-outline {
+            background: rgba(255,255,255,0.03); color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+        }
+        .btn-outline:hover {
+            border-color: var(--primary); background: rgba(99,102,241,0.1);
+            transform: translateY(-3px); box-shadow: 0 8px 24px rgba(99,102,241,0.1);
+        }
+        .btn svg { width: 18px; height: 18px; }
+        .hero-stats {
+            display: flex; justify-content: center; gap: 4rem;
+            margin-top: 4rem; padding-top: 4rem;
+            border-top: 1px solid var(--border-color); opacity: 0;
+        }
+        .stat-item { text-align: center; }
+        .stat-number {
+            font-size: 2.5rem; font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .stat-label { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
+
+        /* 3D FLOATING HERO ELEMENT */
+        .hero-3d-ring {
+            position: absolute; width: 500px; height: 500px;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; opacity: 0.06; z-index: -1;
+        }
+        .ring {
+            position: absolute; border-radius: 50%; border: 1px solid;
+            animation: ring-rotate linear infinite;
+            transform-style: preserve-3d;
+        }
+        .ring-1 { inset: 0; border-color: var(--primary); animation-duration: 12s; }
+        .ring-2 { inset: 40px; border-color: var(--secondary); animation-duration: 18s; animation-direction: reverse; }
+        .ring-3 { inset: 80px; border-color: var(--accent); animation-duration: 25s; }
+        @keyframes ring-rotate { from { transform: rotateX(70deg) rotateZ(0deg); } to { transform: rotateX(70deg) rotateZ(360deg); } }
+
+        /* ══ SECTIONS ══ */
+        .section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
+        .section-header { text-align: center; margin-bottom: 4rem; }
+        .section-tag {
+            display: inline-block; padding: 0.4rem 1rem;
+            background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.25);
+            border-radius: 50px; font-size: 0.85rem; color: var(--primary-light);
+            margin-bottom: 1rem; font-weight: 500;
+        }
+        .section-title { font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; }
+        .section-desc { color: var(--text-secondary); max-width: 600px; margin: 0 auto; }
+
+        /* ══ ABOUT ══ */
+        .about-grid {
+            display: grid; grid-template-columns: 1fr 1.5fr;
+            gap: 4rem; align-items: center;
+        }
+        .about-image-container { position: relative; }
+        .about-image {
+            width: 100%; aspect-ratio: 1;
+            border-radius: var(--radius-xl); position: relative;
+            overflow: visible;
+            perspective: 1000px;
+        }
+        .about-image-inner {
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(14,165,233,0.15));
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 0 60px rgba(99,102,241,0.1), inset 0 0 60px rgba(14,165,233,0.05);
+        }
+        .about-image-inner:hover { transform: rotateY(-8deg) rotateX(5deg); }
+        .about-image-inner::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(99,102,241,0.15), transparent 60%);
+        }
+        /* Circuit pattern */
+        .about-image-inner::after {
+            content: ''; position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(99,102,241,0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99,102,241,0.08) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .about-avatar-svg {
+            width: 70%; height: 70%; position: relative; z-index: 2;
+            filter: drop-shadow(0 0 20px rgba(99,102,241,0.4));
+        }
+        .about-decorations { position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; }
+        .decoration {
+            position: absolute; background: rgba(13,27,46,0.9);
+            border: 1px solid var(--border-color); border-radius: var(--radius-md);
+            padding: 0.75rem 1.25rem; font-size: 0.85rem;
+            display: flex; align-items: center; gap: 0.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1);
+            backdrop-filter: blur(10px);
+        }
+        .decoration-1 { top: 10%; right: -22%; animation: float-dec 4s ease-in-out infinite; }
+        .decoration-2 { bottom: 10%; left: -22%; animation: float-dec 4s ease-in-out infinite 2s; }
+        @keyframes float-dec { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        .decoration-icon {
+            width: 32px; height: 32px; background: var(--gradient-primary);
+            border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
+        }
+        .decoration-icon svg { width: 16px; height: 16px; color: white; }
+        .about-content h3 { font-size: 2rem; margin-bottom: 1.5rem; }
+        .about-content p { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1.05rem; }
+        .about-highlights { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 2rem; }
+        .highlight-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 1rem; background: rgba(13,27,46,0.8);
+            border-radius: var(--radius-md); border: 1px solid var(--border-color);
+            transition: var(--transition); cursor: default;
+        }
+        .highlight-item:hover {
+            border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.06);
+            transform: translateY(-2px) translateZ(10px);
+            box-shadow: 0 8px 24px rgba(99,102,241,0.1);
+        }
+        .highlight-icon {
+            width: 40px; height: 40px; flex-shrink: 0;
+            background: rgba(99,102,241,0.12); border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .highlight-icon svg { width: 20px; height: 20px; color: var(--primary-light); }
+        .highlight-text { font-weight: 500; font-size: 0.95rem; }
+
+        /* ══ SKILLS ══ */
+        .skills-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+        .skill-card {
+            background: rgba(13,27,46,0.8); border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg); padding: 2rem;
+            position: relative; overflow: hidden;
+            transform-style: preserve-3d; perspective: 800px;
+            transition: transform 0.1s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+            cursor: default;
+        }
+        .skill-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: var(--gradient-primary); transform: scaleX(0); transition: transform 0.4s ease; transform-origin: right;
+        }
+        .skill-card::after {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(99,102,241,0.06), transparent 60%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .skill-card:hover::before { transform: scaleX(1); }
+        .skill-card:hover::after { opacity: 1; }
+        .skill-card:hover { border-color: rgba(99,102,241,0.4); box-shadow: 0 24px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(99,102,241,0.15); }
+        .skill-icon {
+            width: 60px; height: 60px; background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.2); border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.5rem; transition: var(--transition);
+        }
+        .skill-icon svg { width: 28px; height: 28px; color: var(--primary-light); }
+        .skill-card:hover .skill-icon {
+            background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4);
+            box-shadow: 0 0 20px rgba(99,102,241,0.2);
+        }
+        .skill-card h4 { font-size: 1.2rem; margin-bottom: 0.75rem; }
+        .skill-card p { color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.25rem; }
+        .skill-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .skill-tag {
+            padding: 0.3rem 0.75rem; background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.15); border-radius: 50px;
+            font-size: 0.78rem; color: var(--primary-light); transition: var(--transition);
+        }
+        .skill-tag:hover { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4); }
+
+        /* ══ PROJECTS ══ */
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; }
+        .project-card {
+            background: rgba(13,27,46,0.8); border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg); overflow: hidden;
+            transition: var(--transition); cursor: default;
+            transform-style: preserve-3d; perspective: 1000px;
+        }
+        .project-card:hover {
+            transform: translateY(-10px) scale(1.01);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.2), 0 0 40px rgba(99,102,241,0.05);
+            border-color: rgba(99,102,241,0.3);
+        }
+        .project-image {
+            height: 220px; position: relative;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+        .project-image-bg {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .project-icon-wrap {
+            position: relative; z-index: 2;
+            width: 80px; height: 80px;
+            background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .project-icon-wrap svg { width: 40px; height: 40px; color: white; }
+        .project-image::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60%;
+            background: linear-gradient(to top, rgba(13,27,46,1), transparent); z-index: 3;
+        }
+        .p1 .project-image-bg { background: linear-gradient(135deg, #1a1060, #0c4a8a); }
+        .p2 .project-image-bg { background: linear-gradient(135deg, #0a3a2a, #0c5a6a); }
+        .p3 .project-image-bg { background: linear-gradient(135deg, #2a0a50, #1a0c6a); }
+        .p4 .project-image-bg { background: linear-gradient(135deg, #3a1000, #6a2a00); }
+        /* Grid lines in project images */
+        .project-image-bg::before {
+            content: ''; position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        /* Floating orbs */
+        .project-image-bg::after {
+            content: ''; position: absolute;
+            width: 120px; height: 120px; border-radius: 50%;
+            background: radial-gradient(circle, currentColor, transparent);
+            opacity: 0.15; top: -20px; right: -20px;
+        }
+        .p1 .project-image-bg::after { color: #6366f1; }
+        .p2 .project-image-bg::after { color: #22d3ee; }
+        .p3 .project-image-bg::after { color: #a855f7; }
+        .p4 .project-image-bg::after { color: #f97316; }
+        .project-content { padding: 1.75rem; }
+        .project-category {
+            display: inline-block; padding: 0.3rem 0.75rem;
+            background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 50px; font-size: 0.78rem; color: var(--primary-light); margin-bottom: 1rem;
+        }
+        .project-content h4 { font-size: 1.3rem; margin-bottom: 0.75rem; }
+        .project-content p { color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .project-tech { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .project-tech span {
+            padding: 0.3rem 0.65rem; background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-secondary);
+        }
+        .project-links { display: flex; gap: 1rem; }
+        .project-link {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            color: var(--text-secondary); text-decoration: none;
+            font-weight: 500; font-size: 0.9rem; transition: var(--transition); cursor: none;
+        }
+        .project-link svg { width: 15px; height: 15px; }
+        .project-link:hover { color: var(--primary-light); }
+
+        /* ══ CONTACT ══ */
+        .contact-wrapper {
+            background: rgba(13,27,46,0.7); border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl); padding: 4rem; text-align: center;
+            position: relative; overflow: hidden; backdrop-filter: blur(20px);
+        }
+        .contact-wrapper::before {
+            content: ''; position: absolute; top: -150px; left: 50%; transform: translateX(-50%);
+            width: 500px; height: 500px; background: radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%);
+            pointer-events: none;
+        }
+        .contact-wrapper::after {
+            content: ''; position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+            background-size: 40px 40px; pointer-events: none;
+        }
+        .contact-wrapper h3 { font-size: 2.5rem; margin-bottom: 1rem; position: relative; z-index: 1; }
+        .contact-wrapper > p { color: var(--text-secondary); margin-bottom: 3rem; max-width: 500px; margin-left: auto; margin-right: auto; position: relative; z-index: 1; }
+        .contact-methods { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; position: relative; z-index: 1; }
+        .contact-method {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 1.25rem 2rem; background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color); border-radius: var(--radius-lg);
+            text-decoration: none; color: var(--text-primary);
+            transition: var(--transition); cursor: none; backdrop-filter: blur(10px);
+            min-width: 220px;
+        }
+        .contact-method:hover {
+            border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.08);
+            transform: translateY(-4px); box-shadow: 0 12px 40px rgba(99,102,241,0.15);
+        }
+        .contact-method-icon {
+            width: 48px; height: 48px; flex-shrink: 0;
+            background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.2);
+            border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
+        }
+        .contact-method-icon svg { width: 22px; height: 22px; color: var(--primary-light); }
+        .contact-method-label { font-size: 0.8rem; color: var(--text-muted); }
+        .contact-method-value { font-weight: 600; font-size: 0.95rem; }
+
+        /* ══ FOOTER ══ */
+        .footer {
+            border-top: 1px solid var(--border-color);
+            padding: 2.5rem 2rem; text-align: center;
+            position: relative; z-index: 2;
+            background: rgba(5,10,24,0.8); backdrop-filter: blur(10px);
+        }
+        .footer-content { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
+        .footer-logo {
+            font-size: 1.75rem; font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            filter: drop-shadow(0 0 12px rgba(99,102,241,0.3));
+        }
+        .footer-text { color: var(--text-muted); font-size: 0.9rem; }
+        .social-links { display: flex; gap: 1rem; }
+        .social-link {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; color: var(--text-secondary);
+            transition: var(--transition); cursor: none;
+        }
+        .social-link svg { width: 18px; height: 18px; }
+        .social-link:hover {
+            background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4);
+            color: var(--primary-light); transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(99,102,241,0.2);
+        }
+
+        /* ══ SCROLL REVEAL INITIAL STATE ══ */
+        .reveal { opacity: 0; transform: translateY(40px) rotateX(8deg); transform-origin: top center; }
+
+        /* ══ RESPONSIVE ══ */
+        @media (max-width: 768px) {
+            .mobile-toggle { display: flex; }
+            .nav-links {
+                position: fixed; top: 64px; right: 0; left: 0;
+                background: rgba(5,10,24,0.97); backdrop-filter: blur(20px);
+                flex-direction: column; padding: 1.5rem 2rem; gap: 1.25rem;
+                border-bottom: 1px solid var(--border-color);
+                transform: translateY(-120%); transition: transform 0.3s ease;
+            }
+            .nav-links.active { transform: translateY(0); }
+            .about-grid { grid-template-columns: 1fr; }
+            .decoration-1, .decoration-2 { display: none; }
+            .hero-stats { gap: 2rem; }
+            .projects-grid, .skills-grid { grid-template-columns: 1fr; }
+            .contact-methods { flex-direction: column; align-items: center; }
+            .contact-wrapper { padding: 2.5rem 1.5rem; }
+        }
+
+        /* ══ 3D DEPTH LINES ══ */
+        .depth-line {
+            position: absolute; background: var(--gradient-primary);
+            opacity: 0.15; pointer-events: none;
+        }
+
+        /* ══ GLOW ORBS ══ */
+        .glow-orb {
+            position: fixed; border-radius: 50%;
+            filter: blur(120px); pointer-events: none; z-index: 0;
+        }
+        .glow-1 { width: 600px; height: 600px; background: rgba(99,102,241,0.08); top: -200px; right: -200px; }
+        .glow-2 { width: 500px; height: 500px; background: rgba(14,165,233,0.06); bottom: -150px; left: -150px; }
+        .glow-3 { width: 300px; height: 300px; background: rgba(34,211,238,0.05); top: 40%; left: 40%; transform: translate(-50%,-50%); }
+
+        /* ══ TECH BADGE FLOATING ══ */
+        .tech-float {
+            position: absolute; background: rgba(13,27,46,0.9);
+            border: 1px solid var(--border-color); border-radius: var(--radius-md);
+            padding: 0.5rem 0.875rem; font-size: 0.78rem; color: var(--text-secondary);
+            display: flex; align-items: center; gap: 0.4rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+            pointer-events: none;
+        }
+        .tech-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 6px var(--primary); }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+    <!-- Custom Cursor -->
+    <div class="cursor" id="cursor"></div>
+    <div class="cursor-trail" id="cursorTrail"></div>
+
+    <!-- Background Glow Orbs -->
+    <div class="glow-orb glow-1"></div>
+    <div class="glow-orb glow-2"></div>
+    <div class="glow-orb glow-3"></div>
+
+    <!-- Three.js Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- ══ NAVIGATION ══ -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-content">
+            <a href="#" class="logo">جاکە.دێڤ</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#about">دەربارەم</a></li>
+                <li><a href="#skills">تواناکان</a></li>
+                <li><a href="#projects">پڕۆژەکان</a></li>
+                <li><a href="#contact">پەیوەندی</a></li>
+            </ul>
+            <div class="mobile-toggle" id="mobileToggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ══ HERO ══ -->
+    <section class="hero" id="home">
+        <!-- Decorative 3D rings -->
+        <div class="hero-3d-ring">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="ring ring-3"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge" id="heroBadge">
+                <div class="badge-dot"></div>
+                خۆراک بۆ کار و کۆلابۆرەیشن
+            </div>
+            <h1 class="hero-title" id="heroTitle">
+                سڵاو، من <span class="gradient-text">جاکەم</span>
+                <br>گەشەپێدەری بەرنامەم
+            </h1>
+            <p class="hero-subtitle" id="heroSub">
+                دروستکردنی ئەزموونی دیجیتاڵی زۆر باش بۆ کۆمپانیاکان و تاکەکەسان — لە ڕووکاری UI وە تا باکئێند
+            </p>
+            <div class="hero-buttons" id="heroBtns">
+                <a href="#projects" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    کارەکانم ببینە
+                </a>
+                <a href="#contact" class="btn btn-outline">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    پەیوەندیم پێوە بکە
+                </a>
+            </div>
+            <div class="hero-stats" id="heroStats">
+                <div class="stat-item">
+                    <div class="stat-number" data-target="5">0</div>
+                    <div class="stat-label">ساڵ ئەزموون</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-target="50">0</div>
+                    <div class="stat-label">پڕۆژەی تەواوکراو</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-target="30">0</div>
+                    <div class="stat-label">کڕیاری دڵخۆش</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ ABOUT ══ -->
+    <section class="section" id="about">
+        <div class="about-grid reveal">
+            <div class="about-image-container">
+                <div class="about-image">
+                    <div class="about-image-inner" id="aboutImg">
+                        <!-- Developer SVG Illustration -->
+                        <svg class="about-avatar-svg" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#6366f1"/>
+                                    <stop offset="100%" style="stop-color:#0ea5e9"/>
+                                </linearGradient>
+                                <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#0f172a"/>
+                                    <stop offset="100%" style="stop-color:#1e293b"/>
+                                </linearGradient>
+                                <filter id="glow-avatar">
+                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                    <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                </filter>
+                            </defs>
+                            <!-- Monitor -->
+                            <rect x="30" y="20" width="140" height="100" rx="8" fill="url(#screenGrad)" stroke="url(#avatarGrad)" stroke-width="2"/>
+                            <!-- Screen content -->
+                            <rect x="40" y="30" width="120" height="80" rx="4" fill="#0a1628"/>
+                            <!-- Code lines -->
+                            <rect x="50" y="42" width="60" height="3" rx="1.5" fill="#6366f1" opacity="0.8"/>
+                            <rect x="50" y="52" width="80" height="3" rx="1.5" fill="#22d3ee" opacity="0.6"/>
+                            <rect x="60" y="62" width="50" height="3" rx="1.5" fill="#818cf8" opacity="0.7"/>
+                            <rect x="60" y="72" width="70" height="3" rx="1.5" fill="#0ea5e9" opacity="0.6"/>
+                            <rect x="50" y="82" width="40" height="3" rx="1.5" fill="#6366f1" opacity="0.8"/>
+                            <rect x="50" y="92" width="65" height="3" rx="1.5" fill="#22d3ee" opacity="0.5"/>
+                            <!-- Monitor stand -->
+                            <rect x="90" y="120" width="20" height="20" rx="2" fill="url(#avatarGrad)" opacity="0.5"/>
+                            <rect x="70" y="138" width="60" height="6" rx="3" fill="url(#avatarGrad)" opacity="0.4"/>
+                            <!-- Code brackets large -->
+                            <text x="12" y="100" font-size="28" fill="url(#avatarGrad)" font-family="monospace" opacity="0.3" filter="url(#glow-avatar)">&lt;/&gt;</text>
+                            <!-- Person sitting -->
+                            <circle cx="100" cy="175" r="14" fill="url(#avatarGrad)" opacity="0.7"/>
+                            <path d="M72 210 Q100 190 128 210" stroke="url(#avatarGrad)" stroke-width="3" fill="none" opacity="0.7"/>
+                            <!-- Floating elements -->
+                            <circle cx="170" cy="35" r="4" fill="#22d3ee" opacity="0.5">
+                                <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="155" cy="55" r="3" fill="#6366f1" opacity="0.4">
+                                <animate attributeName="opacity" values="0.4;0.8;0.4" dur="3s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="40" cy="35" r="2.5" fill="#0ea5e9" opacity="0.5">
+                                <animate attributeName="opacity" values="0.5;1;0.5" dur="2.5s" repeatCount="indefinite"/>
+                            </circle>
+                        </svg>
+                    </div>
+                </div>
+                <div class="about-decorations">
+                    <div class="decoration decoration-1">
+                        <div class="decoration-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                        </div>
+                        <span>زیاتر لە ٥٠ پڕۆژە</span>
+                    </div>
+                    <div class="decoration decoration-2">
+                        <div class="decoration-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        </div>
+                        <span>کوالیتی بەرز</span>
+                    </div>
+                </div>
+            </div>
+            <div class="about-content">
+                <div class="section-tag">دەربارەی من</div>
+                <h3>گەشەپێدەری بەرنامەی پڕۆفیشناڵ</h3>
+                <p>
+                    من جاکەم، گەشەپێدەری Full-Stack و دیزاینەری UI/UX. لە ماوەی ٥ ساڵی ڕابردوودا، کاریگەریم هەبووە لە دروستکردنی چەندین پڕۆژەی سەرکەوتوو بۆ کۆمپانیاکان و تاکەکەسان.
+                </p>
+                <p>
+                    باوەڕم بەوەیە کە تەکنەلۆژیا دەبێت خزمەتی مرۆڤ بکات، نەک بەپێچەوانە. لەبەر ئەوە هەموو کارێکم بە وردی و سەرنجدان لەسەر ئەزموونی بەکارهێنەر دروست دەکەم.
+                </p>
+                <div class="about-highlights">
+                    <div class="highlight-item">
+                        <div class="highlight-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                        </div>
+                        <span class="highlight-text">تیشکدان لەسەر وردەکاری</span>
+                    </div>
+                    <div class="highlight-item">
+                        <div class="highlight-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                        </div>
+                        <span class="highlight-text">چارەسەری داهێنەرانە</span>
+                    </div>
+                    <div class="highlight-item">
+                        <div class="highlight-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        </div>
+                        <span class="highlight-text">کارکردنی خێرا</span>
+                    </div>
+                    <div class="highlight-item">
+                        <div class="highlight-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <span class="highlight-text">هاوکاری باش</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ SKILLS ══ -->
+    <section class="section" id="skills">
+        <div class="section-header reveal">
+            <div class="section-tag">تواناکانم</div>
+            <h2 class="section-title">شارەزاییەکانم</h2>
+            <p class="section-desc">تەکنەلۆژیا و ئامرازەکانی کە بۆ دروستکردنی بەرهەمی دیجیتاڵی سەرکەوتوو بەکاریان دێنم</p>
+        </div>
+        <div class="skills-grid">
+            <div class="skill-card reveal" data-delay="0">
+                <div class="skill-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <h4>گەشەپێدانی وێب</h4>
+                <p>دروستکردنی ماڵپەڕ و ئەپلیکەیشنی وێبی مۆدێرن و responsive بە تەکنەلۆژیای نوێ</p>
+                <div class="skill-tags">
+                    <span class="skill-tag">React</span><span class="skill-tag">Next.js</span>
+                    <span class="skill-tag">TypeScript</span><span class="skill-tag">Node.js</span>
+                </div>
+            </div>
+            <div class="skill-card reveal" data-delay="100">
+                <div class="skill-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                </div>
+                <h4>گەشەپێدانی مۆبایل</h4>
+                <p>دروستکردنی ئەپلیکەیشنی مۆبایل بۆ iOS و Android بە فریمۆرکی کرۆس-پلاتفۆرم</p>
+                <div class="skill-tags">
+                    <span class="skill-tag">React Native</span><span class="skill-tag">Flutter</span><span class="skill-tag">Expo</span>
+                </div>
+            </div>
+            <div class="skill-card reveal" data-delay="200">
+                <div class="skill-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+                </div>
+                <h4>دیزاینی UI/UX</h4>
+                <p>دیزاینکردنی ڕووکاری جوان و بەکارهێنەر-دۆست بۆ ئەزموونێکی باشتر</p>
+                <div class="skill-tags">
+                    <span class="skill-tag">Figma</span><span class="skill-tag">Adobe XD</span><span class="skill-tag">Tailwind</span>
+                </div>
+            </div>
+            <div class="skill-card reveal" data-delay="0">
+                <div class="skill-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                </div>
+                <h4>باکئێند و داتابەیس</h4>
+                <p>دروستکردنی سیستەمی باکئێند و بەڕێوەبردنی داتابەیس بۆ پڕۆژەی گەورە</p>
+                <div class="skill-tags">
+                    <span class="skill-tag">PostgreSQL</span><span class="skill-tag">MongoDB</span><span class="skill-tag">Firebase</span>
+                </div>
+            </div>
+            <div class="skill-card reveal" data-delay="100">
+                <div class="skill-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                </div>
+                <h4>کلاود و DevOps</h4>
+                <p>دەستنیشانکردن و بڵاوکردنەوەی پڕۆژەکان لەسەر پلاتفۆرمی کلاود</p>
+                <div class="skill-tags">
+                    <span class="skill-tag">Vercel</span><span class="skill-tag">AWS</span><span class="skill-tag">Docker</span>
+                </div>
+            </div>
+            <div class="skill-card reveal" data-delay="200">
+                <div class="skill-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+                </div>
+                <h4>زیرەکی دەستکرد</h4>
+                <p>یەکپارچەکردنی ئەی ئای لەگەڵ ئەپلیکەیشنەکان بۆ ئۆتۆماتیکی و زیرەکی</p>
+                <div class="skill-tags">
+                    <span class="skill-tag">OpenAI</span><span class="skill-tag">LangChain</span><span class="skill-tag">Python</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ PROJECTS ══ -->
+    <section class="section" id="projects">
+        <div class="section-header reveal">
+            <div class="section-tag">کارەکانم</div>
+            <h2 class="section-title">نموونەی پڕۆژەکان</h2>
+            <p class="section-desc">هەندێک لە پڕۆژە سەرکەوتووەکان کە کاریگەریان هەبووە لەسەر کڕیارەکانم</p>
+        </div>
+        <div class="projects-grid">
+            <div class="project-card p1 reveal" data-delay="0">
+                <div class="project-image">
+                    <div class="project-image-bg"></div>
+                    <div class="project-icon-wrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    </div>
+                </div>
+                <div class="project-content">
+                    <span class="project-category">ئی-کۆمێرس</span>
+                    <h4>فرۆشگای ئۆنلاین</h4>
+                    <p>پلاتفۆرمی فرۆشتنی ئۆنلاین بە سیستەمی پارەدان و بەڕێوەبردنی کاڵا</p>
+                    <div class="project-tech">
+                        <span>Next.js</span><span>Stripe</span><span>PostgreSQL</span>
+                    </div>
+                    <div class="project-links">
+                        <a href="#" class="project-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            بینینی پڕۆژە
+                        </a>
+                        <a href="#" class="project-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            کۆدی سەرچاوە
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="project-card p2 reveal" data-delay="100">
+                <div class="project-image">
+                    <div class="project-image-bg"></div>
+                    <div class="project-icon-wrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </div>
+                </div>
+                <div class="project-content">
+                    <span class="project-category">داشبۆرد</span>
+                    <h4>سیستەمی بەڕێوەبردن</h4>
+                    <p>داشبۆردی ئەدمین بۆ بەدواداچوون و ڕاپۆرتکردنی داتای بزنس</p>
+                    <div class="project-tech">
+                        <span>React</span><span>Chart.js</span><span>Node.js</span>
+                    </div>
+                    <div class="project-links">
+                        <a href="#" class="project-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            بینینی پڕۆژە
+                        </a>
+                        <a href="#" class="project-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            کۆدی سەرچاوە
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="project-card p3 reveal" data-delay="0">
+                <div class="project-image">
+                    <div class="project-image-bg"></div>
+                    <div class="project-icon-wrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                </div>
+                <div class="project-content">
+                    <span class="project-category">چات</span>
+                    <h4>ئەپلیکەیشنی چات</h4>
+                    <p>ئەپی گفتوگۆی ڕاستەوخۆ بە تایبەتمەندی دەنگ و ڤیدیۆ</p>
+                    <div class="project-tech">
+                        <span>React Native</span><span>Socket.io</span><span>WebRTC</span>
+                    </div>
+                    <div class="project-links">
+                        <a href="#" class="project-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            بینینی پڕۆژە
+                        </a>
+                        <a href="#" class="project-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            کۆدی سەرچاوە
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="project-card p4 reveal" data-delay="100">
+                <div class="project-image">
+                    <div class="project-image-bg"></div>
+                    <div class="project-icon-wrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+                    </div>
+                </div>
+                <div class="project-content">
+                    <span class="project-category">زیرەکی دەستکرد</span>
+                    <h4>یاریدەدەری AI</h4>
+                    <p>چاتبۆتی زیرەک بۆ وەڵامدانەوەی پرسیارەکان و یارمەتیدان</p>
+                    <div class="project-tech">
+                        <span>OpenAI</span><span>LangChain</span><span>Vercel AI</span>
+                    </div>
+                    <div class="project-links">
+                        <a href="#" class="project-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            بینینی پڕۆژە
+                        </a>
+                        <a href="#" class="project-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            کۆدی سەرچاوە
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ CONTACT ══ -->
+    <section class="section" id="contact">
+        <div class="contact-wrapper reveal">
+            <div class="section-tag">پەیوەندی</div>
+            <h3>با پێکەوە کار بکەین!</h3>
+            <p>ئەگەر پڕۆژەیەکت هەیە یان پرسیارێکت هەیە، دوودڵ مەبە لە پەیوەندیکردن پێم</p>
+            <div class="contact-methods">
+                <a href="mailto:jaka@example.com" class="contact-method">
+                    <div class="contact-method-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <div class="contact-method-info">
+                        <div class="contact-method-label">ئیمەیڵ</div>
+                        <div class="contact-method-value">jaka@example.com</div>
+                    </div>
+                </a>
+                <a href="tel:+9647501234567" class="contact-method">
+                    <div class="contact-method-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.39 2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.4a16 16 0 0 0 7.07 7.07l1.06-1.06a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </div>
+                    <div class="contact-method-info">
+                        <div class="contact-method-label">ژمارەی تەلەفۆن</div>
+                        <div class="contact-method-value" dir="ltr">+964 750 123 4567</div>
+                    </div>
+                </a>
+                <a href="#" class="contact-method">
+                    <div class="contact-method-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    </div>
+                    <div class="contact-method-info">
+                        <div class="contact-method-label">شوێن</div>
+                        <div class="contact-method-value">هەولێر، کوردستان</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ FOOTER ══ -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">جاکە</div>
+            <p class="footer-text">© ٢٠٢٦ جاکە. هەموو مافەکان پارێزراون.</p>
+            <div class="social-links">
+                <a href="#" class="social-link" aria-label="GitHub">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+                </a>
+                <a href="#" class="social-link" aria-label="LinkedIn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+                </a>
+                <a href="#" class="social-link" aria-label="Twitter">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+                </a>
+                <a href="#" class="social-link" aria-label="Instagram">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    // ═══════════════════════════════════════════════════════════════
+    // CUSTOM CURSOR
+    // ═══════════════════════════════════════════════════════════════
+    const cursor = document.getElementById('cursor');
+    const trail = document.getElementById('cursorTrail');
+    let cx = -100, cy = -100, tx = -100, ty = -100;
+
+    document.addEventListener('mousemove', e => {
+        cx = e.clientX; cy = e.clientY;
+        cursor.style.left = cx + 'px';
+        cursor.style.top = cy + 'px';
+    });
+
+    function animateTrail() {
+        tx += (cx - tx) * 0.12;
+        ty += (cy - ty) * 0.12;
+        trail.style.left = tx + 'px';
+        trail.style.top = ty + 'px';
+        requestAnimationFrame(animateTrail);
+    }
+    animateTrail();
+
+    document.querySelectorAll('a, button, .skill-card, .project-card, .highlight-item, .contact-method, .social-link').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+            cursor.style.transform = 'translate(-50%, -50%) scale(2)';
+            cursor.style.opacity = '0.6';
+            trail.style.transform = 'translate(-50%, -50%) scale(1.5)';
+            trail.style.borderColor = 'rgba(99,102,241,0.8)';
+        });
+        el.addEventListener('mouseleave', () => {
+            cursor.style.transform = 'translate(-50%, -50%) scale(1)';
+            cursor.style.opacity = '1';
+            trail.style.transform = 'translate(-50%, -50%) scale(1)';
+            trail.style.borderColor = 'rgba(99,102,241,0.5)';
+        });
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // THREE.JS — BACKGROUND SCENE
+    // ═══════════════════════════════════════════════════════════════
+    const canvas3d = document.getElementById('bg-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(0, 0, 40);
+
+    // ── Particle Field ──
+    const count = 2000;
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const colors = [[0.388,0.4,0.949],[0.055,0.647,0.914],[0.133,0.827,0.933]];
+    for (let i = 0; i < count; i++) {
+        pos[i*3]   = (Math.random()-0.5)*200;
+        pos[i*3+1] = (Math.random()-0.5)*200;
+        pos[i*3+2] = (Math.random()-0.5)*200;
+        const c = colors[Math.floor(Math.random()*3)];
+        col[i*3]=c[0]; col[i*3+1]=c[1]; col[i*3+2]=c[2];
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    pGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const pMat = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, transparent: true, opacity: 0.7 });
+    const particles = new THREE.Points(pGeo, pMat);
+    scene.add(particles);
+
+    // ── Wireframe Shapes ──
+    const shapes = [];
+    function addShape(geo, color, x, y, z, sx, sy, sz) {
+        const mat = new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.12 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y, z);
+        mesh.userData = { sx, sy, sz, baseY: y };
+        scene.add(mesh);
+        shapes.push(mesh);
+        return mesh;
+    }
+    addShape(new THREE.IcosahedronGeometry(6, 0),    0x6366f1, -18,  6, -20, 0.004, 0.006, 0.003);
+    addShape(new THREE.TorusGeometry(5, 1.2, 8, 24), 0x0ea5e9,  16, -4, -25, 0.005, 0.003, 0.007);
+    addShape(new THREE.OctahedronGeometry(5, 0),     0x22d3ee,   2, 10, -30, 0.003, 0.005, 0.004);
+    addShape(new THREE.DodecahedronGeometry(4.5, 0), 0x818cf8, -8, -10, -18, 0.006, 0.004, 0.005);
+    addShape(new THREE.TorusKnotGeometry(3.5, 0.8, 60, 8), 0x6366f1, 10,  6, -12, 0.002, 0.004, 0.003);
+    addShape(new THREE.IcosahedronGeometry(3, 1),    0x0ea5e9, -5, -16, -22, 0.007, 0.003, 0.006);
+
+    // ── Mouse Parallax ──
+    let mouseX = 0, mouseY = 0, targetX = 0, targetY = 0;
+    document.addEventListener('mousemove', e => {
+        mouseX = (e.clientX / window.innerWidth - 0.5) * 6;
+        mouseY = -(e.clientY / window.innerHeight - 0.5) * 6;
+    });
+
+    // ── Animation Loop ──
+    let t = 0;
+    function animate() {
+        requestAnimationFrame(animate);
+        t += 0.003;
+
+        particles.rotation.y = t * 0.08;
+        particles.rotation.x = t * 0.04;
+
+        shapes.forEach((s, i) => {
+            s.rotation.x += s.userData.sx;
+            s.rotation.y += s.userData.sy;
+            s.rotation.z += s.userData.sz;
+            s.position.y = s.userData.baseY + Math.sin(t + i * 1.3) * 2;
+        });
+
+        // Smooth camera parallax
+        targetX += (mouseX - targetX) * 0.04;
+        targetY += (mouseY - targetY) * 0.04;
+        camera.position.x = targetX;
+        camera.position.y = targetY;
+        camera.lookAt(0, 0, 0);
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // GSAP ANIMATIONS
+    // ═══════════════════════════════════════════════════════════════
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Hero entrance
+    const heroTL = gsap.timeline({ delay: 0.2 });
+    heroTL
+        .to('#heroBadge',  { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
+        .to('#heroTitle',  { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' }, '-=0.5')
+        .to('#heroSub',    { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.6')
+        .to('#heroBtns',   { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.5')
+        .to('#heroStats',  { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.4');
+
+    // Initial state
+    gsap.set(['#heroBadge','#heroTitle','#heroSub','#heroBtns','#heroStats'], { y: 30 });
+
+    // Scroll reveal
+    document.querySelectorAll('.reveal').forEach((el, i) => {
+        const delay = parseFloat(el.dataset.delay || 0) / 1000;
+        gsap.to(el, {
+            scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none none' },
+            opacity: 1, y: 0, rotateX: 0, duration: 0.9, delay, ease: 'power3.out'
+        });
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // 3D CARD TILT (Mouse Tracking)
+    // ═══════════════════════════════════════════════════════════════
+    function initTilt(selector, intensity = 10) {
+        document.querySelectorAll(selector).forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const r = card.getBoundingClientRect();
+                const x = (e.clientX - r.left) / r.width  - 0.5;
+                const y = (e.clientY - r.top)  / r.height - 0.5;
+                const rotY =  x * intensity;
+                const rotX = -y * intensity;
+                card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(10px)`;
+                card.style.setProperty('--mx', (x * 100 + 50) + '%');
+                card.style.setProperty('--my', (y * 100 + 50) + '%');
+                // Highlight glow direction
+                card.style.boxShadow = `${-x*20}px ${-y*20}px 40px rgba(99,102,241,0.08), 0 24px 48px rgba(0,0,0,0.4)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = '';
+                card.style.boxShadow = '';
+            });
+        });
+    }
+    initTilt('.skill-card', 8);
+    initTilt('.project-card', 6);
+
+    // ═══════════════════════════════════════════════════════════════
+    // COUNTER ANIMATION
+    // ═══════════════════════════════════════════════════════════════
+    function animateCounter(el) {
+        const target = parseInt(el.dataset.target);
+        let current = 0;
+        const step = target / 60;
+        const timer = setInterval(() => {
+            current = Math.min(current + step, target);
+            el.textContent = '+' + Math.floor(current);
+            if (current >= target) { el.textContent = '+' + target; clearInterval(timer); }
+        }, 25);
+    }
+    ScrollTrigger.create({
+        trigger: '#heroStats',
+        start: 'top 90%',
+        onEnter: () => document.querySelectorAll('.stat-number').forEach(animateCounter)
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // NAVBAR SCROLL
+    // ═══════════════════════════════════════════════════════════════
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+        navbar.classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // MOBILE MENU
+    // ═══════════════════════════════════════════════════════════════
+    const toggle = document.getElementById('mobileToggle');
+    const navLinks = document.getElementById('navLinks');
+    toggle.addEventListener('click', () => navLinks.classList.toggle('active'));
+    document.querySelectorAll('.nav-links a').forEach(a => {
+        a.addEventListener('click', () => navLinks.classList.remove('active'));
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // SECTION PARALLAX TINT (shapes change color near sections)
+    // ═══════════════════════════════════════════════════════════════
+    window.addEventListener('scroll', () => {
+        const scrollFrac = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+        const hue = scrollFrac * 60; // shift hue slightly as user scrolls
+        pMat.opacity = 0.5 + scrollFrac * 0.3;
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // SKILL CARD SHIMMER on Load
+    // ═══════════════════════════════════════════════════════════════
+    gsap.from('.skill-tag', {
+        scrollTrigger: { trigger: '.skills-grid', start: 'top 80%' },
+        scale: 0, opacity: 0, stagger: 0.04, duration: 0.5, ease: 'back.out(2)'
+    });
+
+    // Smooth hover on project images
+    document.querySelectorAll('.project-card').forEach(card => {
+        const icon = card.querySelector('.project-icon-wrap');
+        card.addEventListener('mouseenter', () => {
+            gsap.to(icon, { scale: 1.1, rotation: 5, duration: 0.4, ease: 'power2.out' });
+        });
+        card.addEventListener('mouseleave', () => {
+            gsap.to(icon, { scale: 1, rotation: 0, duration: 0.4, ease: 'power2.out' });
+        });
+    });
+
+    // Contact method hover ripple
+    document.querySelectorAll('.contact-method').forEach(m => {
+        m.addEventListener('mouseenter', () => gsap.to(m.querySelector('.contact-method-icon'), { scale: 1.15, duration: 0.3, ease: 'back.out(2)' }));
+        m.addEventListener('mouseleave', () => gsap.to(m.querySelector('.contact-method-icon'), { scale: 1, duration: 0.3, ease: 'power2.out' }));
+    });
+    </script>
+</body>
+</html>
